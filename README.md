@@ -6,15 +6,15 @@
 
 There is absolutely no reason why you should ever use this. ;)
 
-### Speed test results (see `main.c`)
+### Speed test results for 1MB of File I/O (see `main.c`)
 
 Trial | `file` | `stdio.h`
 ----- | ------ | ---------
-1     | 5ms    | 6ms
-2     | 3ms    | 5ms
-3     | 4ms    | 7ms
-4     | 3ms    | 6ms
-5     | 3ms    | 5ms
-6     | 6ms    | 5ms
-7     | 3ms    | 5ms
-8     | 3ms    | 5ms
+1     | 146ms    | 630ms
+2     | 145ms    | 774ms
+3     | 156ms    | 788ms
+4     | 134ms    | 654ms
+5     | 171ms    | 654ms
+6     | 117ms    | 634ms
+7     | 155ms    | 573ms
+8     | 149ms    | 604ms

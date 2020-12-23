@@ -26,3 +26,5 @@ Trial | `file` | `stdio.h`
 6     | 117ms  | 634ms
 7     | 155ms  | 573ms
 8     | 149ms  | 604ms
+
+Complete testing can be found [here](/file/speed.md).

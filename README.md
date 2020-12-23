@@ -8,6 +8,8 @@ There is absolutely no reason why you should ever use this. ;)
 
 If you for some reason want to use this, there are two files you need (found in [this directory](/file/)): `file.h` and `file.c`. You `#include "file.h"` in programs that require the use of this implementation. Simply compile `file.c` alongside your program.
 
+For information on use, see [the wiki](https://github.com/euppal/file/wiki).
+
 ### Licensing thingies
 
 This is licensed under the GPL v3 or *any later version*. You can upgrade the licensing if I have not done so already to a further GPL, but you cannot embed this program in proprietary libraries or software. Consider using proprietary libraries for that use case.

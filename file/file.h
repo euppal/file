@@ -19,6 +19,7 @@
 #ifndef file_h
 #define file_h
 
+#define _POSIX_C_SOURCE 0x200809L
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -41,10 +42,11 @@ typedef struct {
 } file_t;
 
 file_t* openf(const char* filename, int flags, mode_t mode, file_buffering_mode_t buffer_mode);
-void readf(file_t* file, void* buffer, size_t bytes);
+size_t readf(file_t* file, void* buffer, size_t bytes);
 void rewindf(file_t* file);
 int file_is_buffered(const file_t* file);
 size_t file_length(const file_t* file);
+size_t file_offset(const file_t* file);
 void writef(file_t* file, void* buffer, size_t bytes);
 void closef(const file_t* file);
 

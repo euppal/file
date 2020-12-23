@@ -52,12 +52,15 @@ file_t* openf(const char* filename, int flags, mode_t mode, file_buffering_mode_
     return file;
 }
 
-void readf(file_t* file, void* buffer, size_t bytes) {
-    // Read if enough space
-    if (file->_length - file->_offset >= bytes) {
-        read(file->_fd, buffer, bytes);
-        file->_offset += bytes;
+size_t readf(file_t* file, void* buffer, size_t bytes) {
+    // If the remaining bytes < requested bytes, simply read only the remaining bytes
+    if (file->_length - file->_offset < bytes) {
+        bytes = file->_length - file->_offset;
     }
+    
+    read(file->_fd, buffer, bytes);
+    file->_offset += bytes;
+    return bytes;
 }
 
 inline void rewindf(file_t* file) {
@@ -68,6 +71,9 @@ inline int file_is_buffered(const file_t* file) {
 }
 inline size_t file_length(const file_t* file) {
     return file->_length;
+}
+inline size_t file_offset(const file_t* file) {
+    return file->_offset;
 }
 
 void writef(file_t* file, void* buffer, size_t bytes) {
@@ -96,7 +102,9 @@ void writef(file_t* file, void* buffer, size_t bytes) {
 
 void closef(const file_t* file) {
     if (file->_blk_buffer != NULL) {
-        write(file->_fd, file->_blk_buffer, file->_running_blksize);
+        if (file->_running_blksize > 0) {
+            write(file->_fd, file->_blk_buffer, file->_running_blksize);
+        }
         free(file->_blk_buffer);
     }
     close(file->_fd);

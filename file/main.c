@@ -1,9 +1,7 @@
 //
 //  main.c
-//  file
+//  This main.c is for TESTING.
 //
-
-// This main.c is for TESTING.
 
 #include <stdio.h>
 #include <stdlib.h>

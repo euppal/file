@@ -1,5 +1,5 @@
 //
-//  file.c
+//  file: file.c
 //  Copyright (C) 2020 Ethan Uppal
 //
 //  This program is free software: you can redistribute it and/or modify
@@ -17,8 +17,26 @@
 //
 
 #include "file.h"
-#include <stdlib.h>
 
+#if defined(_POSIX)
+
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+typedef struct _file_t {
+    int _fd;
+    int _flags;
+    mode_t _mode;
+    off_t _offset;
+    off_t _length;
+    blksize_t _block_size;
+    blksize_t _running_blksize;
+    char* _blk_buffer;
+} file_t;
+
+#ifdef _FILE_OPENF_OLD
 file_t* openf(const char* filename, int flags, mode_t mode, file_buffering_mode_t buffer_mode) {
     file_t* file = (file_t*)malloc(sizeof(file_t));
     
@@ -45,12 +63,93 @@ file_t* openf(const char* filename, int flags, mode_t mode, file_buffering_mode_
             file->_block_size = 512;
             file->_blk_buffer = (char*)malloc(sizeof(char) * 512);
             break;
+        case FILE_256_BYTE_BUFFER:
+            file->_block_size = 256;
+            file->_blk_buffer = (char*)malloc(sizeof(char) * 256);
+            break;
         default:
             break;
     }
     
     return file;
 }
+#else
+file_t* openf(const char* filename, const char* options, file_buffering_mode_t buffer_mode) {
+    int flags = 0;
+    mode_t mode = 0666;
+    
+    // Traverse the string to get the options
+    for (int i = 0; options[i]; i++) {
+        switch (options[i]) {
+            case 'r': {
+                if (flags | FILEO_WRONLY) {
+                    flags &= ~FILEO_WRONLY;
+                    flags |= FILEO_RDWR;
+                } else {
+                    flags |= FILEO_RDONLY;
+                }
+                break;
+            }
+            case 'w': {
+                if (flags | FILEO_RDONLY) {
+                    flags &= ~FILEO_RDONLY;
+                    flags |= FILEO_RDWR;
+                } else {
+                    flags |= FILEO_WRONLY;
+                }
+                break;
+            }
+            case 'c': {
+                flags |= FILEO_CREATE;
+            }
+            case 'a': {
+                flags |= FILEO_APPEND;
+            }
+            case 't': {
+                flags |= FILEO_TRUNC;
+            }
+            default:
+                break;
+        }
+    }
+    
+    // Create the file handle
+    file_t* file = (file_t*)malloc(sizeof(file_t));
+    
+    // Open the file
+    file->_fd = open(filename, flags, mode);
+    file->_flags = flags;
+    file->_mode = mode;
+    
+    // Setup information
+    struct stat stat;
+    fstat(file->_fd, &stat);
+    file->_offset = 0;
+    file->_length = stat.st_size;
+    file->_block_size = stat.st_blksize;
+    file->_running_blksize = 0;
+    switch (buffer_mode) {
+        case FILE_NO_BUFFERING:
+            file->_blk_buffer = NULL;
+            break;
+        case FILE_BLOCK_SIZE_BUFFER:
+            file->_blk_buffer = (char*)malloc(sizeof(char) * file->_block_size);
+            break;
+        case FILE_512_BYTE_BUFFER:
+            file->_block_size = 512;
+            file->_blk_buffer = (char*)malloc(sizeof(char) * 512);
+            break;
+        case FILE_256_BYTE_BUFFER:
+            file->_block_size = 256;
+            file->_blk_buffer = (char*)malloc(sizeof(char) * 256);
+            break;
+        default:
+            break;
+    }
+    
+    return file;
+}
+#endif
 
 size_t readf(file_t* file, void* buffer, size_t bytes) {
     // If the remaining bytes < requested bytes, simply read only the remaining bytes
@@ -65,15 +164,6 @@ size_t readf(file_t* file, void* buffer, size_t bytes) {
 
 inline void rewindf(file_t* file) {
     file->_offset = 0;
-}
-inline int file_is_buffered(const file_t* file) {
-    return file->_blk_buffer != NULL;
-}
-inline size_t file_length(const file_t* file) {
-    return file->_length;
-}
-inline size_t file_offset(const file_t* file) {
-    return file->_offset;
 }
 
 void writef(file_t* file, void* buffer, size_t bytes) {
@@ -91,7 +181,7 @@ void writef(file_t* file, void* buffer, size_t bytes) {
         while (bytes > 0) {
             if (bytes < file->_block_size) {
                 write(file->_fd, buffer, bytes);
-                bytes = 0;
+                return;
             } else {
                 write(file->_fd, buffer, file->_block_size);
                 bytes -= file->_block_size;
@@ -110,3 +200,169 @@ void closef(const file_t* file) {
     close(file->_fd);
     free((void*)file);
 }
+
+inline int file_is_buffered(const file_t* file) {
+    return file->_blk_buffer != NULL;
+}
+inline size_t file_length(const file_t* file) {
+    return file->_length;
+}
+inline size_t file_offset(const file_t* file) {
+    return file->_offset;
+}
+inline void file_set_offset(file_t* file, size_t new_offset) {
+    file->_offset = new_offset;
+}
+inline int file_flags(const file_t* file) {
+    return file->_flags;
+}
+inline mode_t file_mode(const file_t* file) {
+    return file->_mode;
+}
+
+#elif defined(_WINDOWS)
+
+#include <Windows.h>
+
+typedef struct _file_t {
+    HANDLE _handle;
+    DWORD _access;
+    DWORD _flags;
+    size_t _length;
+    size_t _offset;
+    DWORD _block_size;
+    DWORD _running_blksize;
+    char* _blk_buffer;
+} file_t;
+
+file_t* openf(const char* filename, const char* options, file_buffering_mode_t buffer_mode) {
+    DWORD access = 0;
+    DWORD flags = 0;
+
+    // Traverse the string to get the options
+    for (int i = 0; options[i]; i++) {
+        switch (options[i]) {
+            case 'r': {
+                access |= FILEO_RDONLY;
+                break;
+            }
+            case 'w': {
+                access |= FILEO_WRONLY;
+                break;
+            }
+            case 'c': {
+                flags |= FILEO_CREATE;
+                break;
+            }
+            case 't': {
+                flags |= FILEO_TRUNC;
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
+    // Create the file handle
+    file_t* file = (file_t*)malloc(sizeof(file_t));
+    file->_access = access;
+    file->_flags = flags;
+    
+    // Get file information
+    DWORD high_length;
+    DWORD low_length = GetFileSize(file->_handle, &high_length);
+    file->_length = (size_t)high_length << 32 | (size_t)low_length;
+    file->_running_blksize = 0;
+    file->_block_size = 4096//good windows block size;
+    file->_running_blksize = 0;
+    switch (buffer_mode) {
+        case FILE_NO_BUFFERING:
+            file->_blk_buffer = NULL;
+            break;
+        case FILE_BLOCK_SIZE_BUFFER:
+            file->_blk_buffer = (char*)malloc(sizeof(char) * file->_block_size);
+            break;
+        case FILE_512_BYTE_BUFFER:
+            file->_block_size = 512;
+            file->_blk_buffer = (char*)malloc(sizeof(char) * 512);
+            break;
+        case FILE_256_BYTE_BUFFER:
+            file->_block_size = 256;
+            file->_blk_buffer = (char*)malloc(sizeof(char) * 256);
+            break;
+        default:
+            break;
+    }
+    
+    return file;
+}
+
+size_t readf(file_t* file, void* buffer, size_t bytes) {
+    size_t bytes_read = 0;
+    if (file->_offset < file->_length) {
+        ReadFile(file->_handle, buffer, bytes, &bytes_read, NULL);
+        file->_offset += bytes_read;
+    }
+    return bytes_read;
+}
+
+inline void rewindf(file_t* file) {
+    file->_offset = 0;
+}
+
+void writef(file_t* file, void* buffer, size_t bytes) {
+    size_t bytes_written;
+    if (file_is_buffered(file)) {
+        size_t i = 0;
+        while (i < bytes) {
+            if (file->_running_blksize >= file->_block_size) {
+                WriteFile(file->_handle, buffer, file->_block_size, &bytes_written, NULL);
+                file->_running_blksize = 0;
+            } else {
+                file->_blk_buffer[file->_running_blksize++] = ((char*)buffer)[i++];
+            }
+        }
+    } else {
+        while (bytes > 0) {
+            if (bytes < file->_block_size) {
+                WriteFile(file->_handle, buffer, bytes, &bytes_written, NULL);
+                return;
+            } else {
+                WriteFile(file->_handle, buffer, file->_block_size, &bytes_written, NULL);
+                bytes -= file->_block_size;
+            }
+        }
+    }
+}
+
+void closef(const file_t* file) {
+    if (file->_blk_buffer != NULL) {
+        if (file->_running_blksize > 0) {
+            //write(file->_fd, file->_blk_buffer, file->_running_blksize);
+        }
+        free(file->_blk_buffer);
+    }
+    CloseHandle(file->_handle);
+    free((void*)file);
+}
+
+inline int file_is_buffered(const file_t* file) {
+    return file->_blk_buffer != NULL;
+}
+inline size_t file_length(const file_t* file) {
+    return file->_length;
+}
+inline size_t file_offset(const file_t* file) {
+    return file->_offset;
+}
+inline void file_set_offset(file_t* file, size_t new_offset) {
+    file->_offset = new_offset;
+}
+inline DWORD file_access(const file_t* file) {
+    return file->_access;
+}
+inline DWORD file_flags(const file_t* file) {
+    return file->_flags;
+}
+
+#endif

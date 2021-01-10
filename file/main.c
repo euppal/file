@@ -13,7 +13,7 @@
 long test_file() {
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC, &start);
-    file_t* file = openf("test1", O_CREAT | O_RDWR, 0666, FILE_512_BYTE_BUFFER);
+    file_t* file = openf("test1", "cw", FILE_512_BYTE_BUFFER);
     char str[1] = { 'a' };
     for (size_t i = 0; i < SIZE; i++) {
         writef(file, str, 1);

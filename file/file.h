@@ -64,6 +64,8 @@ typedef struct _file_t file_t;
 
 #endif
 
+#include <stddef.h>
+
 // File manipulation
 
 #ifdef _FILE_OPENF_OLD

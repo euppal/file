@@ -236,7 +236,7 @@ inline size_t file_length(const file_t* file) {
 inline size_t file_offset(const file_t* file) {
     return file->_offset;
 }
-inline void file_set_offset(file_t* file, size_t new_offset) {
+inline size_t file_set_offset(file_t* file, size_t new_offset) {
     file->_offset = new_offset;
 }
 inline int file_flags(const file_t* file) {

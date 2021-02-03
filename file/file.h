@@ -81,7 +81,7 @@ size_t readf(file_t* file, void* buffer, size_t bytes);
 void rewindf(file_t* file);
 void writef(file_t* file, void* buffer, size_t bytes);
 void closef(const file_t* file);
-void flushf(file_t* file);
+void flushf(const file_t* file);
 
 // Attribute querying/modification
 

@@ -179,7 +179,7 @@ file_t* openf(const char* filename, const char* options, file_buffering_mode_t b
 
 size_t readf(file_t* file, void* buffer, size_t bytes) {
     // If the remaining bytes < requested bytes, simply read only the remaining bytes
-    if (file->_length - file->_offset < bytes) {
+    if ((size_t)(file->_length - file->_offset) < bytes) {
         bytes = file->_length - file->_offset;
     }
     
@@ -205,7 +205,7 @@ void writef(file_t* file, void* buffer, size_t bytes) {
         }
     } else {
         while (bytes > 0) {
-            if (bytes < file->_block_size) {
+            if (bytes < (size_t)file->_block_size) {
                 write(file->_fd, buffer, bytes);
                 return;
             } else {
@@ -216,7 +216,7 @@ void writef(file_t* file, void* buffer, size_t bytes) {
     }
 }
 
-inline void flushf(file_t* file) {
+inline void flushf(const file_t* file) {
     if (file->_blk_buffer != NULL) {
         if (file->_running_blksize > 0) {
             write(file->_fd, file->_blk_buffer, file->_running_blksize);

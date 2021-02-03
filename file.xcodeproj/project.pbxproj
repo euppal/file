@@ -247,6 +247,10 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = P9333ASGZ6;
 				ENABLE_HARDENED_RUNTIME = YES;
+				OTHER_CFLAGS = (
+					"-Wall",
+					"-Wextra",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -257,6 +261,10 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = P9333ASGZ6;
 				ENABLE_HARDENED_RUNTIME = YES;
+				OTHER_CFLAGS = (
+					"-Wall",
+					"-Wextra",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;

@@ -24,8 +24,12 @@
 #if defined(_WIN32) || defined(_WIN64)
 #define _WINDOWS
 #elif defined(__unix__) || (defined (__APPLE__) && defined (__MACH__))
+#ifndef _POSIX
 #define _POSIX
+#endif
+#ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 0x200809L
+#endif
 #include <fcntl.h>
 #endif
 

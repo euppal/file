@@ -36,20 +36,26 @@ long test_stdio() {
 }
 
 int main(int argc, const char * argv[]) {
-    printf("%d TRIALS\n"
-           "--------\n", TRIALS);
-    long total_file = 0;
-    long total_stdio = 0;
-    for (int i = 1; i <= TRIALS; i++) {
-        const long file_time = test_file() / 100000;
-        total_file += file_time;
-        printf("Trial %d:\n", i);
-        printf("  file.h: %ld ms\n", file_time);
-        const long stdio_time = test_stdio() / 100000;
-        total_stdio += stdio_time;
-        printf("  stdio.h: %ld ms\n", stdio_time);
-        system("rm test1; rm test2");
-    }
-    printf("AVG file.h: %ld ms, AVG stdio.h: %ld ms\n", total_file / TRIALS, total_stdio / TRIALS);
+//    printf("%d TRIALS\n"
+//           "--------\n", TRIALS);
+//    long total_file = 0;
+//    long total_stdio = 0;
+//    for (int i = 1; i <= TRIALS; i++) {
+//        const long file_time = test_file() / 100000;
+//        total_file += file_time;
+//        printf("Trial %d:\n", i);
+//        printf("  file.h: %ld ms\n", file_time);
+//        const long stdio_time = test_stdio() / 100000;
+//        total_stdio += stdio_time;
+//        printf("  stdio.h: %ld ms\n", stdio_time);
+//        system("rm test1; rm test2");
+//    }
+//    printf("AVG file.h: %ld ms, AVG stdio.h: %ld ms\n", total_file / TRIALS, total_stdio / TRIALS);
+    file_t* file = openf("file.h", "r", FILE_NO_BUFFERING);
+    char* contents = malloc(file_length(file) + 1);
+    contents[file_length(file)] = 0;
+    readf(file, contents, file_length(file));
+    puts(contents);
+    closef(file);
     return 0;
 }

@@ -21,9 +21,11 @@
 #if defined(_POSIX)
 
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <limits.h>
 
 typedef struct _file_t {
     int _fd;
@@ -35,6 +37,20 @@ typedef struct _file_t {
     blksize_t _running_blksize;
     char* _blk_buffer;
 } file_t;
+
+const char* filename_make_absolute(const char* filename) {
+    static char buffer[PATH_MAX];
+
+    if (filename[0] == '/') {
+        return filename;
+    } else {
+        getcwd(buffer, sizeof(buffer));
+        size_t end = strlen(buffer);
+        buffer[end++] = '/';
+        strcpy(buffer + end, filename);
+        return buffer;
+    }
+}
 
 #ifdef _FILE_OPENF_OLD
 file_t* openf(const char* filename, int flags, mode_t mode, file_buffering_mode_t buffer_mode) {
@@ -74,10 +90,47 @@ file_t* openf(const char* filename, int flags, mode_t mode, file_buffering_mode_
     return file;
 }
 #else
+static file_t* openf_fd(int fd, int flags, mode_t mode,
+                        file_buffering_mode_t buffer_mode) {
+    // Create the file handle
+    file_t* file = malloc(sizeof(file_t));
+
+    // Open the file
+    file->_fd = fd;
+    file->_flags = flags;
+    file->_mode = mode;
+
+    // Setup information
+    struct stat stat;
+    fstat(file->_fd, &stat);
+    file->_offset = 0;
+    file->_length = stat.st_size;
+    file->_block_size = stat.st_blksize;
+    file->_running_blksize = 0;
+    switch (buffer_mode) {
+        case FILE_NO_BUFFERING:
+            file->_blk_buffer = NULL;
+            break;
+        case FILE_BLOCK_SIZE_BUFFER:
+            file->_blk_buffer = (char*)malloc(sizeof(char) * file->_block_size);
+            break;
+        case FILE_512_BYTE_BUFFER:
+            file->_block_size = 512;
+            file->_blk_buffer = (char*)malloc(sizeof(char) * 512);
+            break;
+        case FILE_256_BYTE_BUFFER:
+            file->_block_size = 256;
+            file->_blk_buffer = (char*)malloc(sizeof(char) * 256);
+            break;
+    }
+
+    return file;
+}
+
 file_t* openf(const char* filename, const char* options, file_buffering_mode_t buffer_mode) {
-    int flags = 0;
     mode_t mode = 0666;
-    
+    int flags = 0;
+
     // Traverse the string to get the options
     for (int i = 0; options[i]; i++) {
         switch (options[i]) {
@@ -101,53 +154,23 @@ file_t* openf(const char* filename, const char* options, file_buffering_mode_t b
             }
             case 'c': {
                 flags |= FILEO_CREATE;
+                break;
             }
             case 'a': {
                 flags |= FILEO_APPEND;
+                break;
             }
             case 't': {
                 flags |= FILEO_TRUNC;
+                break;
             }
             default:
                 break;
         }
     }
-    
-    // Create the file handle
-    file_t* file = (file_t*)malloc(sizeof(file_t));
-    
-    // Open the file
-    file->_fd = open(filename, flags, mode);
-    file->_flags = flags;
-    file->_mode = mode;
-    
-    // Setup information
-    struct stat stat;
-    fstat(file->_fd, &stat);
-    file->_offset = 0;
-    file->_length = stat.st_size;
-    file->_block_size = stat.st_blksize;
-    file->_running_blksize = 0;
-    switch (buffer_mode) {
-        case FILE_NO_BUFFERING:
-            file->_blk_buffer = NULL;
-            break;
-        case FILE_BLOCK_SIZE_BUFFER:
-            file->_blk_buffer = (char*)malloc(sizeof(char) * file->_block_size);
-            break;
-        case FILE_512_BYTE_BUFFER:
-            file->_block_size = 512;
-            file->_blk_buffer = (char*)malloc(sizeof(char) * 512);
-            break;
-        case FILE_256_BYTE_BUFFER:
-            file->_block_size = 256;
-            file->_blk_buffer = (char*)malloc(sizeof(char) * 256);
-            break;
-        default:
-            break;
-    }
-    
-    return file;
+    filename = filename_make_absolute(filename);
+    return openf_fd(open(filename, flags, mode), flags, mode, buffer_mode);
+    free(filename);
 }
 #endif
 

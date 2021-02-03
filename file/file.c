@@ -169,7 +169,11 @@ file_t* openf(const char* filename, const char* options, file_buffering_mode_t b
         }
     }
     filename = filename_make_absolute(filename);
-    return openf_fd(open(filename, flags, mode), flags, mode, buffer_mode);
+    int fd = open(filename, flags, mode);
+    if (fd < 0) {
+        return NULL;
+    }
+    return openf_fd(fd, flags, mode, buffer_mode);
 }
 #endif
 

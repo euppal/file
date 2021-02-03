@@ -221,12 +221,12 @@ inline void flushf(const file_t* file) {
         if (file->_running_blksize > 0) {
             write(file->_fd, file->_blk_buffer, file->_running_blksize);
         }
-        free(file->_blk_buffer);
     }
 }
 
 void closef(const file_t* file) {
     flushf(file);
+    free(file->_blk_buffer);
     close(file->_fd);
     free((void*)file);
 }

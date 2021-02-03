@@ -81,13 +81,14 @@ size_t readf(file_t* file, void* buffer, size_t bytes);
 void rewindf(file_t* file);
 void writef(file_t* file, void* buffer, size_t bytes);
 void closef(const file_t* file);
+void flushf(file_t* file);
 
 // Attribute querying/modification
 
 int file_is_buffered(const file_t* file);
 size_t file_length(const file_t* file);
 size_t file_offset(const file_t* file);
-size_t file_set_offset(file_t* file, size_t new_offset);
+int file_set_offset(file_t* file, size_t new_offset);
 
 #if defined(_POSIX)
 int file_flags(const file_t* file);

@@ -51,7 +51,7 @@ int main(int argc, const char * argv[]) {
 //        system("rm test1; rm test2");
 //    }
 //    printf("AVG file.h: %ld ms, AVG stdio.h: %ld ms\n", total_file / TRIALS, total_stdio / TRIALS);
-    file_t* file = openf("file.h", "r", FILE_NO_BUFFERING);
+    file_t* file = openf("fildfdfe.h", "r", FILE_NO_BUFFERING);
     char* contents = malloc(file_length(file) + 1);
     contents[file_length(file)] = 0;
     readf(file, contents, file_length(file));

@@ -216,13 +216,17 @@ void writef(file_t* file, void* buffer, size_t bytes) {
     }
 }
 
-void closef(const file_t* file) {
+inline void flushf(file_t* file) {
     if (file->_blk_buffer != NULL) {
         if (file->_running_blksize > 0) {
             write(file->_fd, file->_blk_buffer, file->_running_blksize);
         }
         free(file->_blk_buffer);
     }
+}
+
+void closef(const file_t* file) {
+    flushf(file);
     close(file->_fd);
     free((void*)file);
 }
@@ -236,8 +240,12 @@ inline size_t file_length(const file_t* file) {
 inline size_t file_offset(const file_t* file) {
     return file->_offset;
 }
-inline size_t file_set_offset(file_t* file, size_t new_offset) {
-    file->_offset = new_offset;
+inline int file_set_offset(file_t* file, size_t new_offset) {
+    if (new_offset < (size_t)file->_length) {
+        file->_offset = new_offset;
+        return 0;
+    }
+    return 1;
 }
 inline int file_flags(const file_t* file) {
     return file->_flags;

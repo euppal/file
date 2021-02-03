@@ -83,7 +83,7 @@ void closef(const file_t* file);
 int file_is_buffered(const file_t* file);
 size_t file_length(const file_t* file);
 size_t file_offset(const file_t* file);
-void file_set_offset(file_t* file, size_t new_offset);
+int file_set_offset(file_t* file, size_t new_offset);
 
 #if defined(_POSIX)
 int file_flags(const file_t* file);

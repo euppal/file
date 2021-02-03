@@ -170,7 +170,6 @@ file_t* openf(const char* filename, const char* options, file_buffering_mode_t b
     }
     filename = filename_make_absolute(filename);
     return openf_fd(open(filename, flags, mode), flags, mode, buffer_mode);
-    free(filename);
 }
 #endif
 
@@ -378,8 +377,12 @@ inline size_t file_length(const file_t* file) {
 inline size_t file_offset(const file_t* file) {
     return file->_offset;
 }
-inline void file_set_offset(file_t* file, size_t new_offset) {
-    file->_offset = new_offset;
+inline int file_set_offset(file_t* file, size_t new_offset) {
+    if (new_offset < (size_t)file->_length) {
+        file->_offset = new_offset;
+        return 0;
+    }
+    return 1;
 }
 inline DWORD file_access(const file_t* file) {
     return file->_access;

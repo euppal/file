@@ -22,10 +22,11 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h> // SEEK_SET
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <limits.h>
+#include <unistd.h>
 
 typedef struct _file_t {
     int _fd;
@@ -90,6 +91,15 @@ file_t* openf(const char* filename, int flags, mode_t mode, file_buffering_mode_
     return file;
 }
 #else
+#define FILEO_APPEND O_APPEND
+#define FILEO_CREATE O_CREAT
+#define FILEO_NONBLOCK O_NONBLOCK
+#define FILEO_TRUNC O_TRUNC
+
+#define FILEO_RDONLY O_RDONLY
+#define FILEO_WRONLY O_WRONLY
+#define FILEO_RDWR O_RDWR
+
 static file_t* openf_fd(int fd, int flags, mode_t mode,
                         file_buffering_mode_t buffer_mode) {
     // Create the file handle
@@ -126,6 +136,9 @@ static file_t* openf_fd(int fd, int flags, mode_t mode,
 
     return file;
 }
+
+#define IS_WRITE(flags) (((flags) & FILEO_WRONLY) || ((flags) & FILEO_RDWR))
+#define IS_APPEND(flags) ((flags) & FILEO_APPEND)
 
 file_t* openf(const char* filename, const char* options, file_buffering_mode_t buffer_mode) {
     mode_t mode = 0666;
@@ -168,6 +181,11 @@ file_t* openf(const char* filename, const char* options, file_buffering_mode_t b
                 break;
         }
     }
+
+    if (IS_WRITE(flags) && !IS_APPEND(flags)) {
+        flags |= FILEO_TRUNC;
+    }
+    
     filename = filename_make_absolute(filename);
     int fd = open(filename, flags, mode);
     if (fd < 0) {
@@ -177,13 +195,18 @@ file_t* openf(const char* filename, const char* options, file_buffering_mode_t b
 }
 #endif
 
-size_t readf(file_t* file, void* buffer, size_t bytes) {
+ssize_t readf(file_t* file, void* buffer, size_t bytes) {
     // If the remaining bytes < requested bytes, simply read only the remaining bytes
     if ((size_t)(file->_length - file->_offset) < bytes) {
         bytes = file->_length - file->_offset;
     }
     
-    read(file->_fd, buffer, bytes);
+    if (lseek(file->_fd, file->_offset, SEEK_SET) != file->_offset) {
+        return -1;
+    }
+    if (read(file->_fd, buffer, bytes) == -1) {
+        return -1;
+    }
     file->_offset += bytes;
     return bytes;
 }
@@ -192,13 +215,20 @@ inline void rewindf(file_t* file) {
     file->_offset = 0;
 }
 
-void writef(file_t* file, void* buffer, size_t bytes) {
+ssize_t writef(file_t* file, void* buffer, size_t bytes) {
+    const off_t off = (file->_mode | FILEO_APPEND) ? file->_length : 0;
+    if (lseek(file->_fd, off, SEEK_SET) != off) {
+        return -1;
+    }
+    
+    ssize_t written = 0;
     if (file_is_buffered(file)) {
         size_t i = 0;
         while (i < bytes) {
             if (file->_running_blksize >= file->_block_size) {
                 write(file->_fd, buffer, file->_block_size);
                 file->_running_blksize = 0;
+                written += file->_block_size;
             } else {
                 file->_blk_buffer[file->_running_blksize++] = ((char*)buffer)[i++];
             }
@@ -207,13 +237,18 @@ void writef(file_t* file, void* buffer, size_t bytes) {
         while (bytes > 0) {
             if (bytes < (size_t)file->_block_size) {
                 write(file->_fd, buffer, bytes);
-                return;
+                written += bytes;
+                file->_length += written;
+                return written;
             } else {
                 write(file->_fd, buffer, file->_block_size);
                 bytes -= file->_block_size;
+                written += file->_block_size;
             }
         }
     }
+    file->_length += written;
+    return written;
 }
 
 inline void flushf(const file_t* file) {

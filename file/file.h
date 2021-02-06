@@ -46,18 +46,7 @@ typedef struct _file_t file_t;
 
 // The attributes to be used in the `openf` function parsing segment.
 
-#if defined(_POSIX)
-
-#define FILEO_APPEND O_APPEND
-#define FILEO_CREATE O_CREAT
-#define FILEO_NONBLOCK O_NONBLOCK
-#define FILEO_TRUNC O_TRUNC
-
-#define FILEO_RDONLY O_RDONLY
-#define FILEO_WRONLY O_WRONLY
-#define FILEO_RDWR O_RDWR
-
-#elif defined(_WINDOWS)
+#if defined(_WINDOWS)
 
 #define FILEO_CREATE CREATE_ALWAYS
 #define FILEO_TRUNC TRUNCATE_EXISTING
@@ -73,13 +62,27 @@ typedef struct _file_t file_t;
 // File manipulation
 
 #ifdef _FILE_OPENF_OLD
+
+#if defined(_POSIX)
+
+#define FILEO_APPEND O_APPEND
+#define FILEO_CREATE O_CREAT
+#define FILEO_NONBLOCK O_NONBLOCK
+#define FILEO_TRUNC O_TRUNC
+
+#define FILEO_RDONLY O_RDONLY
+#define FILEO_WRONLY O_WRONLY
+#define FILEO_RDWR O_RDWR
+
+#endif
+
 file_t* openf(const char* filename, int flags, mode_t mode, file_buffering_mode_t buffer_mode);
 #else
 file_t* openf(const char* filename, const char* options, file_buffering_mode_t buffer_mode);
 #endif
-size_t readf(file_t* file, void* buffer, size_t bytes);
+ssize_t readf(file_t* file, void* buffer, size_t bytes);
 void rewindf(file_t* file);
-void writef(file_t* file, void* buffer, size_t bytes);
+ssize_t writef(file_t* file, void* buffer, size_t bytes);
 void closef(const file_t* file);
 void flushf(const file_t* file);
 
